@@ -23,6 +23,15 @@ func NewRetrier(
 	}
 }
 
+// No Delay
+func NoDelay(
+	delay int,
+) func(int) time.Duration {
+	return func(retries int) time.Duration {
+		return 0
+	}
+}
+
 // Delays are a constant amount
 func ConstantDelay(
 	delay int,
