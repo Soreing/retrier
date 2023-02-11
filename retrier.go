@@ -24,9 +24,7 @@ func NewRetrier(
 }
 
 // No Delay
-func NoDelay(
-	delay int,
-) func(int) time.Duration {
+func NoDelay() func(int) time.Duration {
 	return func(retries int) time.Duration {
 		return 0
 	}
@@ -34,7 +32,7 @@ func NoDelay(
 
 // Delays are a constant amount
 func ConstantDelay(
-	delay int,
+	delay time.Duration,
 ) func(int) time.Duration {
 	return func(retries int) time.Duration {
 		millis := delay
@@ -44,23 +42,25 @@ func ConstantDelay(
 
 // Delay is calculated by (delay*retries)
 func LinearDelay(
-	step int,
+	step time.Duration,
 ) func(int) time.Duration {
 	return func(retries int) time.Duration {
-		millis := step + retries*step
-		return time.Duration(millis) * time.Millisecond
+		return step + time.Duration(retries)*step
 	}
 }
 
 // Delay is calculated by min((delay*retries), cap)
 func CappedLinearDelay(
-	step int,
-	cap int,
+	step time.Duration,
+	cap time.Duration,
 ) func(int) time.Duration {
 	return func(retries int) time.Duration {
-		raw := step + retries*step
-		millis := int(math.Min(float64(raw), float64(cap)))
-		return time.Duration(millis) * time.Millisecond
+		delay := step + time.Duration(retries)*step
+		if delay < cap {
+			return delay
+		} else {
+			return cap
+		}
 	}
 }
 
