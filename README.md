@@ -19,18 +19,18 @@ ret := retrier.NewRetrier(
     },
 )
 ```
-Use the Run or RunCtx functions to run any task. The retrier will automatically retry the task if it returns an error until the retry cap is reached or the context is canceled.
+Use the Run or RunCtx functions to run any task. The retrier will retry the task if it returns true ("should retry"). The retrier will not retry the task if it returns false ("should not retry"), if the retry cap is reached or if the context is canceled.
 ```golang
 ret.RunCtx(
     context.TODO(),
-    func(ctx context.Context) error {
+    func(ctx context.Context) (error, bool) {
         resp, err := http.Get("https://some-api.com")
         if err != nil {
             fmt.Println("request failed")
-            return err
+            return err, true
         } else {
             fmt.Println(resp)
-            return nil
+            return nil, false
         }
     },
 )
