@@ -7,13 +7,21 @@ import (
 	"time"
 )
 
+// Retrier controls how to to run the retry function. A task will be retried
+// up to a set retry count with some delay between the retries defined by a
+// delay function.
 type Retrier struct {
-	max    int                     // Max number of retries (-1 for infinite)
-	delayf func(int) time.Duration // Returns delay duration for retry count
+	// max is the upper limit of retries. The task can not be retried more than
+	// the specified number. To disable the limit, set -1 as the value.
+	max int
+
+	// delayf returns some amount of duration to wait before retrying a task.
+	// The function takes the retry count as a parameter to allow for increasing
+	// delay between retries.
+	delayf func(int) time.Duration
 }
 
-// Creates a new custom retrier structure
-// Retries are delayed by the given function's values
+// NewRetrier creates a retrier from max retries and a delay function.
 func NewRetrier(
 	max int,
 	delayf func(int) time.Duration,
@@ -24,14 +32,15 @@ func NewRetrier(
 	}
 }
 
-// No Delay
+// NoDelay returns a delay function that has no delay between retries.
 func NoDelay() func(int) time.Duration {
 	return func(retries int) time.Duration {
 		return 0
 	}
 }
 
-// Delays are a constant amount
+// ConstantDelay returns a delay function that creates a constant wait duration
+// between retries. The delay will be the same between the retries.
 func ConstantDelay(
 	delay time.Duration,
 ) func(int) time.Duration {
@@ -41,7 +50,8 @@ func ConstantDelay(
 	}
 }
 
-// Delay is calculated by (delay*retries)
+// LinearDelay returns a delay function that creates a linearly increasing
+// wait duration between retries. The delay is calculated by (step*retries).
 func LinearDelay(
 	step time.Duration,
 ) func(int) time.Duration {
@@ -50,7 +60,9 @@ func LinearDelay(
 	}
 }
 
-// Delay is calculated by min((delay*retries), cap)
+// CappedLinearDelay returns a delay function that creates a linearly increasing
+// wait duration between retries up to a specific limit where delay can not be
+// longer. The delay is calculated by min((delay*retries), cap)
 func CappedLinearDelay(
 	step time.Duration,
 	cap time.Duration,
@@ -65,7 +77,9 @@ func CappedLinearDelay(
 	}
 }
 
-// Delay is calculated by coef*base^retries
+// ExponentialDelay returns a delay function that creates an exponentially
+// increasing wait duration between retries. The delay is calculated by
+// (coef*base^retries).
 func ExponentialDelay(
 	coef int,
 	base int,
@@ -76,7 +90,9 @@ func ExponentialDelay(
 	}
 }
 
-// Delay is calculated by min(coef*base^retries, cap)
+// ExponentialDelay returns a delay function that creates an exponentially
+// increasing wait duration between retries up to a specific limit where delay
+// can not be longer.. The delay is calculated by (coef*base^retries).
 func CappedExponentialDelay(
 	coef int,
 	base int,
@@ -89,7 +105,7 @@ func CappedExponentialDelay(
 	}
 }
 
-// Runs a task in the retrier with background context
+// Run executes a work task with the background context.
 func (r *Retrier) Run(work func() (error, bool)) error {
 	return r.RunCtx(
 		context.Background(),
@@ -99,7 +115,9 @@ func (r *Retrier) Run(work func() (error, bool)) error {
 	)
 }
 
-// Runs a task in the retrier with custom context
+// RunCtx executes a work task in the context of a retrier until the task
+// decides not to retry, or if the maximum retries have been reached, or if the
+// context has been canceled and retrying should stop.
 func (r *Retrier) RunCtx(
 	ctx context.Context,
 	work func(ctx context.Context) (error, bool),
@@ -122,7 +140,8 @@ func (r *Retrier) RunCtx(
 	}
 }
 
-// Sleeps till the timer is up or the context is cancelled
+// sleep stops the execution for some duration, or until the context has
+// been canceled.
 func (r *Retrier) sleep(
 	ctx context.Context,
 	dur time.Duration,
