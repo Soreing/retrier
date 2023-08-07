@@ -2,6 +2,7 @@ package retrier
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"time"
 )
@@ -89,32 +90,34 @@ func CappedExponentialDelay(
 }
 
 // Runs a task in the retrier with background context
-func (r *Retrier) Run(work func() error) error {
-	return r.RunCtx(context.Background(), func(ctx context.Context) error {
-		return work()
-	})
+func (r *Retrier) Run(work func() (error, bool)) error {
+	return r.RunCtx(
+		context.Background(),
+		func(ctx context.Context) (error, bool) {
+			return work()
+		},
+	)
 }
 
 // Runs a task in the retrier with custom context
 func (r *Retrier) RunCtx(
 	ctx context.Context,
-	work func(ctx context.Context) error,
+	work func(ctx context.Context) (error, bool),
 ) error {
 	retries := 0
 
 	for {
-		if ret := work(ctx); ret != nil {
-			if r.max == -1 || retries < r.max {
-				timeout := time.After(r.delayf(retries))
-				if err := r.sleep(ctx, timeout); err != nil {
-					return err
-				}
-				retries++
-			} else {
-				return ret
-			}
+		err, ret := work(ctx)
+		if !ret {
+			return err
+		} else if r.max != -1 && retries >= r.max {
+			return fmt.Errorf("failed after max retries: %w", err)
 		} else {
-			return nil
+			err := r.sleep(ctx, r.delayf(retries))
+			if err != nil {
+				return err
+			}
+			retries++
 		}
 	}
 }
@@ -122,8 +125,9 @@ func (r *Retrier) RunCtx(
 // Sleeps till the timer is up or the context is cancelled
 func (r *Retrier) sleep(
 	ctx context.Context,
-	t <-chan time.Time,
+	dur time.Duration,
 ) error {
+	t := time.After(dur)
 	select {
 	case <-t:
 		return nil
