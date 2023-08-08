@@ -45,8 +45,7 @@ func ConstantDelay(
 	delay time.Duration,
 ) func(int) time.Duration {
 	return func(retries int) time.Duration {
-		millis := delay
-		return time.Duration(millis) * time.Millisecond
+		return delay
 	}
 }
 
