@@ -89,7 +89,7 @@ func ExponentialDelay(
 	}
 }
 
-// ExponentialDelay returns a delay function that creates an exponentially
+// CappedExponentialDelay returns a delay function that creates an exponentially
 // increasing wait duration between retries up to a specific limit where delay
 // can not be longer.. The delay is calculated by (coef*base^retries).
 func CappedExponentialDelay(
