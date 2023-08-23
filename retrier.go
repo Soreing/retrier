@@ -80,27 +80,31 @@ func CappedLinearDelay(
 // increasing wait duration between retries. The delay is calculated by
 // (coef*base^retries).
 func ExponentialDelay(
-	coef int,
+	coef time.Duration,
 	base int,
 ) func(int) time.Duration {
 	return func(retries int) time.Duration {
-		millis := coef * int(math.Pow(float64(base), float64(retries)))
-		return time.Duration(millis) * time.Millisecond
+		scale := int(math.Pow(float64(base), float64(retries)))
+		return coef * time.Duration(scale)
 	}
 }
 
-// ExponentialDelay returns a delay function that creates an exponentially
+// CappedExponentialDelay returns a delay function that creates an exponentially
 // increasing wait duration between retries up to a specific limit where delay
 // can not be longer.. The delay is calculated by (coef*base^retries).
 func CappedExponentialDelay(
-	coef int,
+	coef time.Duration,
 	base int,
-	cap int,
+	cap time.Duration,
 ) func(int) time.Duration {
 	return func(retries int) time.Duration {
-		raw := coef * int(math.Pow(float64(base), float64(retries)))
-		millis := int(math.Min(float64(raw), float64(cap)))
-		return time.Duration(millis) * time.Millisecond
+		scale := int(math.Pow(float64(base), float64(retries)))
+		delay := coef * time.Duration(scale)
+		if delay <= cap {
+			return delay
+		} else {
+			return cap
+		}
 	}
 }
 
@@ -130,7 +134,7 @@ func (r *Retrier) RunCtx(
 		} else if r.max != -1 && retries >= r.max {
 			return fmt.Errorf("failed after max retries: %w", err)
 		} else {
-			err := r.sleep(ctx, r.delayf(retries))
+			err := sleep(ctx, r.delayf(retries))
 			if err != nil {
 				return err
 			}
@@ -141,7 +145,7 @@ func (r *Retrier) RunCtx(
 
 // sleep stops the execution for some duration, or until the context has
 // been canceled.
-func (r *Retrier) sleep(
+func sleep(
 	ctx context.Context,
 	dur time.Duration,
 ) error {
