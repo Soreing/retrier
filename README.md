@@ -1,4 +1,10 @@
 # Retrier
+
+![Build](https://github.com/soreing/retrier/actions/workflows/build_status.yaml/badge.svg)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Soreing/4b6f950f01f3e6e5b9ed17b268664538/raw/retrier)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Soreing/retrier)](https://goreportcard.com/report/github.com/Soreing/retrier)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Soreing/retrier.svg)](https://pkg.go.dev/github.com/Soreing/retrier)
+
 Retrier is a small package that makes retrying anything easier with custom or predefined retry functions.
 
 ## Usage
